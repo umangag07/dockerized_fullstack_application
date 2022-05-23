@@ -1,4 +1,6 @@
 const User = require("../models/userModel")
+const bcrypt = require("bcrypt")
+const axios = require("axios")
 
 exports.findAllUsers = async (req,res,next)=>{
     try{
@@ -15,19 +17,20 @@ exports.findAllUsers = async (req,res,next)=>{
     }
 
 }
-
 exports.findSingleUser = async (req,res,next)=>{
     try{
         const user = await User.findById(req.params.id)
         console.log("User found by id",user)
-        if(user!=null){
-            res.status(200).send({
-                message:"Success",
-                data:user
-            })
+        let status=200;
+        let message="success";
+        if(user==null){
+           status = 404
+           message = "Failure"
         }
-        res.status(404).send({
-            message:"user with the specified id not exist",
+       
+        res.status(status).send({
+            message:message,
+            data:user?user:''
         })
     }catch(e){
         console.log(e);
@@ -38,6 +41,7 @@ exports.findSingleUser = async (req,res,next)=>{
 }
 exports.findUserByEmail = async (req,res,next)=>{
     try{
+        console.log('findby email',req.body)
         const user = await User.findOne({
             email:req.body.email
         })
@@ -57,12 +61,14 @@ exports.findUserByEmail = async (req,res,next)=>{
         })
     }
 }
-
 exports.createUser = async(req,res,next)=>{
     try{
-        const data = req.body
+        let data = req.body
         console.log("Body sent to create user",data)
         let user_username = await User.findOne({userName:data.userName})
+        if(! data.hasOwnProperty("password")){
+            throw new Error("Password is not defined")
+        }
         console.log("User found by username",user_username)
         if(user_username != null){
             throw new Error("Not a unique userName")
@@ -73,10 +79,17 @@ exports.createUser = async(req,res,next)=>{
         if(user_email !=null){
             throw new Error("user with same email exist")
         }
-        const response = await User.create(data);
-        res.status(200).send({
-            message:"Success",
-            data:response
+        bcrypt.hash(data.password,10,async (err,hash)=>{
+            if(err){
+                console.log(err)
+                throw new Error("Error in saving password")
+            }
+            data = {...data,password:hash};
+            const response = await User.create(data);
+            res.status(200).send({
+                message:"Success",
+                data:response
+            })
         })
     }catch(e){
         console.log(e);
@@ -86,7 +99,6 @@ exports.createUser = async(req,res,next)=>{
     }
     
 }
-
 exports.updateUser = async(req,res,next)=>{
     try{
         const response = await User.findByIdAndUpdate(req.params.id,req.body)
@@ -126,4 +138,39 @@ exports.deleteUser = async(req,res,next)=>{
         })
     }
    
+}
+exports.login = async(req,res,next)=>{
+    try{
+        let data  = req.body
+        const email = data.email
+        const password = data.password
+        if(email == undefined || password == undefined){
+            throw new Error("Please define all the things")
+        }
+        let response = await User.findOne({email:email});
+        if(response===null){
+            throw new Error("Can't find the user in the database with this email")
+        }
+        bcrypt.compare(password, response.password, function(err, result) {
+            if(err){
+                console.log(err)
+                throw new Error(err)
+            }
+            if(!result){
+                console.log("Login unsuccessfull");
+                return res.status(404).send({
+                    message:"Login unsuccessfull"
+                })
+            }
+            console.log("User logged in ")
+            res.status(200).send({
+                message:"Login successfull"
+            })
+        });
+    }catch(e){
+        console.log(e);
+        res.status(400).send({
+            message:e.message,
+        })
+    }
 }
