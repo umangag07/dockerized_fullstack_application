@@ -1,6 +1,5 @@
 const User = require("../models/userModel")
 const bcrypt = require("bcrypt")
-const axios = require("axios")
 
 exports.findAllUsers = async (req,res,next)=>{
     try{
