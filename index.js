@@ -1,13 +1,32 @@
 const express = require("express")
 const mongoose = require('mongoose');
-const { MONGO_USER, MONGO_PASSWORD, MONGO_IP, MONGO_PORT } = require("./config/config");
-
-const app = express()
-
-const port = process.env.PORT || 5000
+const { MONGO_USER, MONGO_PASSWORD, MONGO_IP, MONGO_PORT, REDIS_URL, REDIS_PORT, SESSION_SECRET } = require("./config/config");
 const postRouter = require("./routes/postRoutes")
 const userRouter = require("./routes/userRoute")
+const session = require("express-session")
+const redis = require("redis")
+const redis_store = require("connect-redis")(session)
+const redisClient = redis.createClient({
+    host:REDIS_URL,
+    port:REDIS_PORT
+})
+
+
+const port = process.env.PORT || 5000
+const app = express()
 app.use(express.json())
+
+app.use(session({
+    store:new redis_store({client:redisClient}),
+    secret:SESSION_SECRET,
+    cookie:{
+        secure:false,
+        resave:false,
+        saveUnitialized:false,
+        httpOnly:true,
+        maxAge:30000, // in milliseconds
+    }
+}))
 
 app.get('/',(req,res)=>{
     console.log("/ path requested")
