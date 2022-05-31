@@ -5,26 +5,31 @@ const postRouter = require("./routes/postRoutes")
 const userRouter = require("./routes/userRoute")
 const session = require("express-session")
 const redis = require("redis")
-const redis_store = require("connect-redis")(session)
+const RedisStore = require("connect-redis")(session)
 const redisClient = redis.createClient({
     host:REDIS_URL,
     port:REDIS_PORT
 })
 
+// redisClient.connect()
+//     .then(()=>{
+//     console.log("Conneced to redis successfully")
+//     })
+//     .catch(console.error)
 
 const port = process.env.PORT || 5000
 const app = express()
 app.use(express.json())
 
 app.use(session({
-    store:new redis_store({client:redisClient}),
+    store:new RedisStore({client:redisClient}),
     secret:SESSION_SECRET,
     cookie:{
         secure:false,
         resave:false,
-        saveUnitialized:false,
+        saveUninitialized: false,
         httpOnly:true,
-        maxAge:30000, // in milliseconds
+        maxAge:60000, // in milliseconds
     }
 }))
 

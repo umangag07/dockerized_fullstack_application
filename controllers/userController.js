@@ -84,6 +84,7 @@ exports.createUser = async(req,res,next)=>{
                 throw new Error("Error in saving password")
             }
             data = {...data,password:hash};
+            req.session.user = data;
             const response = await User.create(data);
             res.status(200).send({
                 message:"Success",
@@ -146,11 +147,11 @@ exports.login = async(req,res,next)=>{
         if(email == undefined || password == undefined){
             throw new Error("Please define all the things")
         }
-        let response = await User.findOne({email:email});
-        if(response===null){
+        let User_response = await User.findOne({email:email});
+        if(User_response===null){
             throw new Error("Can't find the user in the database with this email")
         }
-        bcrypt.compare(password, response.password, function(err, result) {
+        bcrypt.compare(password, User_response.password, function(err, result) {
             if(err){
                 console.log(err)
                 throw new Error(err)
@@ -161,6 +162,7 @@ exports.login = async(req,res,next)=>{
                     message:"Login unsuccessfull"
                 })
             }
+            req.session.user = User_response
             console.log("User logged in ")
             res.status(200).send({
                 message:"Login successfull"
